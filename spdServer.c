@@ -181,8 +181,8 @@ void respond(int n)
                   srand( (unsigned)time( NULL ) );          
                   for( i = 0; i < file_size/int_len/16;i++ )
                   {
-                    int d=rand();
-                    int arr[]={rand(),rand(),rand(),rand(),rand(),rand(),rand(),rand(),rand(),rand(),rand(),rand(),rand(),rand(),rand(),rand()};
+                 //   int d=rand();
+                    int arr[]={fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand()};
                     write (clients[n], arr, sizeof(arr));
                   }
                 } else {
@@ -210,3 +210,8 @@ void respond(int n)
     close(clients[n]);
     clients[n]=-1;
 }
+inline int fastrand() {
+      int g_seed = (214013*g_seed+2531011);
+            return (g_seed>>16)&0x7FFF;
+}
+
