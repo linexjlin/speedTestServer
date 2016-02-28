@@ -19,7 +19,7 @@ $./a.out -p 10000
 #include<signal.h>
 #include<fcntl.h>
 
-#define CONNMAX 1000
+#define CONNMAX 10
 #define BYTES 1024
 
 int listenfd, clients[CONNMAX];
@@ -178,11 +178,11 @@ void respond(int n)
                 send(clients[n], "HTTP/1.0 200 OK\n\n", 17, 0);
                 if (file_size>0) {
                   int i;
-                  srand( (unsigned)time( NULL ) );          //初始化随机数
-                  for( i = 0; i < file_size/int_len;i++ )                          //打印出10个随机数
+                  srand( (unsigned)time( NULL ) );          
+                  for( i = 0; i < file_size/int_len/16;i++ )
                   {
                     int d=rand();
-                    int arr[]={d};
+                    int arr[]={rand(),rand(),rand(),rand(),rand(),rand(),rand(),rand(),rand(),rand(),rand(),rand(),rand(),rand(),rand(),rand()};
                     write (clients[n], arr, sizeof(arr));
                   }
                 } else {
