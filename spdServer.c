@@ -21,6 +21,7 @@ $./a.out -p 10000
 
 #define CONNMAX 10
 #define BYTES 1024
+#define BUFSIZE 512*1024/sizeof(int)
 
 int listenfd, clients[CONNMAX];
 int int_len;
@@ -28,8 +29,20 @@ void error(char *);
 void startServer(char *);
 void respond(int);
 
+int buffer[1][BUFSIZE];
+
+int init_buffer() {
+	int i,j;
+	for ( i = 0; i <1; i++) {
+		for (j=0; j<BUFSIZE; j++) {
+			buffer[i][j]=fastrand();
+		}
+	}
+}
+
 int main(int argc, char* argv[])
 {
+    init_buffer();
     int_len=sizeof(int);
     struct sockaddr_in clientaddr;
     socklen_t addrlen;
@@ -162,12 +175,14 @@ void respond(int n)
                 int file_size;
                 
                 //printf("reqline: %s; file_name: %sis: %d\n",reqline[1],file_name,strcmp(reqline[1],"/100M"));
-                if ( strncmp(file_name,"/100M",5)==0) {
-                   file_size=100*1024*1024; 
-                } else if ( strncmp(file_name,"/200M",5)==0) {
-                   file_size=200*1024*1024; 
-                } else if ( strncmp(file_name,"/500M",5)==0) {
-                   file_size=500*1024*1024;
+                if ( strncmp(file_name,"/128M",5)==0) {
+                   file_size=128*1024*1024; 
+                } else if ( strncmp(file_name,"/256M",5)==0) {
+                   file_size=256*1024*1024; 
+                } else if ( strncmp(file_name,"/512M",5)==0) {
+                   file_size=512*1024*1024;
+                } else if ( strncmp(file_name,"/1G",3)==0) {
+                   file_size=1024*1024*1024;
                 } else {
                    file_size=0;
                 }
@@ -175,32 +190,42 @@ void respond(int n)
                 printf("file name is: %s\n", file_name);
                 printf("file size is: %d bytes\n",file_size);
 	        
-                send(clients[n], "HTTP/1.0 200 OK\n\n", 17, 0);
+		char *header;
+                send(clients[n], "HTTP/1.0 200 OK\r\n", 17, 0);
                 if (file_size>0) {
                   int i;
                   srand( (unsigned)time( NULL ) );          
-                  for( i = 0; i < file_size/int_len/16;i++ )
+
+		  asprintf(&header,"Accept-Ranges: bytes\r\nContent-Length: %d\r\n\r\n",file_size);
+                  write(clients[n], header,strlen(header));
+                  for( i = 0; i < file_size/(BUFSIZE*sizeof(int));i++ )
                   {
-                 //   int d=rand();
-                    int arr[]={fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand(),fastrand()};
-                    write (clients[n], arr, sizeof(arr));
+                    write (clients[n], buffer[0], sizeof(buffer[0]));
                   }
                 } else {
                   char msg[]="<html>\
-                    <title>Speed Test File List</title>\
-                    <body>\
-                    <h2>Speed Test Files:</h2>\
-                    <hr>\
-                    <ul>\
-                    <li><a href=\"100M\">100M</a>\
-                    <li><a href=\"200M\">200M</a>\
-                    <li><a href=\"500M\">500M</a>\
-                    </ul>\
-                    <hr>\
-                    </body>\
-                    </html>\n";
-                  write (clients[n], msg, strlen(msg));
+<title>Speed Test File List</title>\
+<body>\
+<h2>Speed Test Files:</h2>\
+<hr>\
+<ul>\
+<li><a href=\"128M\">128M</a>\
+<li><a href=\"256M\">256M</a>\
+<li><a href=\"512M\">512M</a>\
+<li><a href=\"1G\">1G</a>\
+</ul>\
+<hr>\
+</body>\
+</html>\n";
+		  asprintf(&header,"Content-Type: text/html; charset=UTF-8\r\n\
+Accept-Ranges: bytes\r\n\
+Connection: keep-alive\r\n\
+Content-Length: %d\r\n\r\n",strlen(msg));
+
+                  write(clients[n], header,strlen(header));
+                  write(clients[n], msg, strlen(msg));
                 }
+		free(header);
             }
         }
     }
@@ -210,8 +235,9 @@ void respond(int n)
     close(clients[n]);
     clients[n]=-1;
 }
+
+
 inline int fastrand() {
       int g_seed = (214013*g_seed+2531011);
             return (g_seed>>16)&0x7FFF;
 }
-
